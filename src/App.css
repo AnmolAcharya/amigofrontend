@@ -1,0 +1,24 @@
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 20px 0;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+.message {
+  margin: 8px 0;
+  padding: 8px 16px;
+  border-radius: 20px;
+  max-width: 80%;
+}
+
+.user-message {
+  background-color: #e3f2fd;
+  margin-left: auto;
+}
+
+.assistant-message {
+  background-color: #fff;
+  margin-right: auto;
+}
