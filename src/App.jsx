@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Container, 
   Paper, 
@@ -13,7 +13,6 @@ import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
 import axios from 'axios';
 import './App.css';
-import context from './Context.js';
 
 
 
@@ -22,17 +21,18 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState([]);
   const [logtranscript, setLogTranscript] = useState("");
+  const messagesEndRef = useRef(null);
 
   const backendUrl =import.meta.env.VITE_BACKEND_URL;
   const [lat, setLat] = useState(null);
   const [lon, setLon] = useState(null);
-  // const context =
-  // "You are an AI responding to the commands of a user attempting to issue commands to a program via voice, you will be given commands through this text right after the word ENDOFCONTEXT is written. The parts after the word are to be treated as user commands. Only the last part written after <|user|> is the current command to  be answered to. For all user commands a json result needs to be output. For commands such as open youtube, you will need to output a json with commandid =1, and url= the url of the website which you can guess as well as a message which is whatever you want to answer, include the http:// in the beginning of the url, if the website is not recognizable just treat it as an invalid command but say in the message that you do not recognize the website. For any commands like describe me the weather, if they do not accompany a weather data json, return a message saying fetching the weather data with command id 2, and if it does come with the weather data, return a message describing the weather data json with command id 0. For any command that is fulfillable by text you may answer they directly as they would be by a default llm in the message field and set the command id to 10, treat it as a valid command and output a valid message, for example write me a song, you can output a song, or tell me a story you can generate a story and send it in the message and so on. For any conversational message input, return with a conversational message and commandid 0. For any command that is not a valid command and not conversational return commandid 0 and a message that says something like this is not a valid command, please enter a valid command, you can be a bit more playful or different with this command rejection as you prefer. ENDOFCONTEXT\n";
-
   const [error, setError] = useState('');
   function redirectTo(url) {
     if (url) {
-        window.open(url, '_blank'); // Opens the URL in a new tab
+        setTimeout(() => {
+          window.open(url, '_blank'); // Opens the URL in a new tab
+
+        }, 600);
     } else {
         console.error("Invalid URL provided");
     }
@@ -53,16 +53,22 @@ function App() {
   }, []);
 
 
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
 
-  const getWeather = async (context, logtranscript) => {
-    axios.get(`${backendUrl}/getWeather?lat=${lat}&lon=${lon}&appid=${openWeatherApikey}`)
+
+  const getWeather = async ( logtranscript) => {
+    axios.get(`${backendUrl}/getWeather?lat=${lat}&lon=${lon}`)
       .then(async (response) => {
         console.log(response)
         await axios.post(
           `${backendUrl}/getGemini`, // Gemini Pro model endpoint
           {
-             text: context+logtranscript + JSON.stringify(response.data)
+             text: logtranscript + JSON.stringify(response.data)
              } // Gemini API request format
           ,
           {
@@ -110,7 +116,7 @@ function App() {
         const response = await axios.post(
           `${backendUrl}/getGemini`, // Gemini Pro model endpoint
           {
-               text: context + logtranscript + `<|user| : ${transcript} >` 
+               text:  logtranscript + `<|user| : ${transcript} >` 
           },
           {
             headers: {
@@ -134,7 +140,7 @@ function App() {
         }
 
         if(jsonObject.commandid == 2){
-          getWeather(context,logtranscript)
+          getWeather(logtranscript)
         }
 
       } catch (err) {
@@ -198,11 +204,12 @@ function App() {
                   <ListItemText 
                     primary={message.text}
                     secondary={message.sender === 'user' ? 'You' : 'Amigo'}
+                    ref={messagesEndRef}
                   />
                 </Paper>
               </ListItem>
             ))}
-          </List>
+          </List >
         </Paper>
 
         {error && (
