@@ -27,6 +27,8 @@ function App() {
   const [lat, setLat] = useState(null);
   const [lon, setLon] = useState(null);
   const [error, setError] = useState('');
+  const [voices, setVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(null);
   function redirectTo(url) {
     if (url) {
         setTimeout(() => {
@@ -37,6 +39,29 @@ function App() {
         console.error("Invalid URL provided");
     }
   }
+
+  useEffect(() => {
+    const synth = window.speechSynthesis || window.webkitSpeechSynthesis;
+    const updateVoices = () => {
+      const availableVoices = synth.getVoices();
+      setVoices(availableVoices);
+      if (availableVoices.length > 0 && !selectedVoice) {
+        setSelectedVoice(availableVoices[5]);
+      }
+    };
+    
+    updateVoices();
+    if (synth.onvoiceschanged !== undefined) {
+      synth.onvoiceschanged = updateVoices;
+    }
+  }, [selectedVoice]);
+  const speak = (inputText) => {
+    if (!inputText) return;
+    const synth = window.speechSynthesis || window.webkitSpeechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(inputText);
+    utterance.voice = selectedVoice;
+    synth.speak(utterance);
+  };
 
   const getLocation = async () => {
     if ("geolocation" in navigator) {
@@ -82,6 +107,7 @@ function App() {
             const weatherresponseText = weatherresponse.data.candidates[0].content.parts[0].text;
             const weatherjsonObject = JSON.parse(weatherresponseText.replace("```json\n","").replace("```","").replace("commandId","commandid").replace("\n",""));
             addMessage('assistant', weatherjsonObject.message);
+            
 
           }
         )
@@ -167,13 +193,25 @@ function App() {
 
   const addMessage = (sender, text) => {
     setMessages(prev => [...prev, { sender, text, timestamp: new Date() }]);
+    if(sender=="assistant"){
+      speak(text)
+    }
   };
 
   return (
     <Container maxWidth="sm">
+
+<select
+        onChange={(e) => setSelectedVoice(voices.find(voice => voice.name === e.target.value))}
+        className="border p-2 rounded w-full"
+      >
+        {voices.map((voice, index) => (
+          <option key={index} value={voice.name}>{voice.name} ({voice.lang})</option>
+        ))}
+      </select>
       <Box sx={{ my: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom align="center">
-          Amigo Voice Assistant
+          Sirixa Voice Assistant
         </Typography>
         
         <Paper 
@@ -203,7 +241,7 @@ function App() {
                 >
                   <ListItemText 
                     primary={message.text}
-                    secondary={message.sender === 'user' ? 'You' : 'Amigo'}
+                    secondary={message.sender === 'user' ? 'You' : 'Sirixa'}
                     ref={messagesEndRef}
                   />
                 </Paper>
